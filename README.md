@@ -1,0 +1,3 @@
+Full rewrite of https://github.com/bcherny/svg-font-create
+
+Coming soon...

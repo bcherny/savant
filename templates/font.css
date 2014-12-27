@@ -1,0 +1,30 @@
+@font-face {
+	font-family: '<%= fontFamily %>';
+	src:url('<%= fontFamily %>.eot?-<%= hex %>');
+	src:url('<%= fontFamily %>.eot?#iefix-<%= hex %>') format('embedded-opentype'),
+		url('<%= fontFamily %>.woff?-<%= hex %>') format('woff'),
+		url('<%= fontFamily %>.ttf?-<%= hex %>') format('truetype'),
+		url('<%= fontFamily %>.svg?-<%= hex %>#<%= fontFamily %>') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}
+
+[class^="<%= prefix %>-"], [class*=" <%= prefix %>-"] {
+	font-family: "<%= fontFamily %>";
+	speak: none;
+	font-style: normal;
+	font-weight: normal;
+	font-variant: normal;
+	text-transform: none;
+	line-height: 1;
+
+	/* Better Font Rendering =========== */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+<% _.forEach(glyphs, function(glyph) { %>
+	.<%= prefix %>-<%= glyph.css.replace(/ /g, '-') %>:before {
+		content: "\<%= glyph.unicode.replace(/([^\w\d]+)/g, '').slice(1) %>";
+	}
+<% }); %>

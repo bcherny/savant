@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<link rel="stylesheet" href="./font.css" />
+	<style>
+		div {
+			background: #f9f9f9;
+			height: 100px;
+			float: left;
+			font-size: 36px;
+			margin: 0 1px 1px 0;
+			position: relative;
+			text-align: center;
+			width: 100px;
+		}
+
+		div span {
+			color: #666;
+			display: block;
+			font-size: 11px;
+			padding: 4px 8px;
+			position: absolute;
+				bottom: 0;
+				left: 0;
+				right: 0;
+		}
+	</style>
+</head>
+<body>
+
+	<% _.forEach(glyphs, function(glyph) { %>
+		<div class="tif-<%= glyph.css.replace(/ /g, '-') %>"><span><%= glyph.css %></span></div>
+	<% }); %>
+
+</body>
+</html>
