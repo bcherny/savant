@@ -1,7 +1,7 @@
 import { exec } from 'child_process'
 import { readFile, writeFile } from 'fs'
 import { basename, dirname, normalize, resolve } from 'path'
-import { extend, first, forEach, map } from 'lodash'
+import { extend, first, forEach, last, map, merge } from 'lodash'
 import { all, defer, when } from 'q'
 import { DOMParser } from 'xmldom'
 import * as glob from 'glob'
@@ -25,6 +25,8 @@ const rgxUnicode = /([a-f][a-f\d]{3,4})/i
 
 function compile (options) {
 
+  let packageJson = {}
+
   // ensure that input and output dirs are defined
   if (!options.input_dir)
     throw new TypeError('svgs-to-fonts#compile expects an options hash with an "input_dir" property')
@@ -36,33 +38,59 @@ function compile (options) {
   options.input_dir = normalizePath(options.input_dir)
   options.output_dir = normalizePath(options.output_dir)
 
-  return readPackageJson().then(function (packageJson) {
+  console.log(`Compiling from ${options.input_dir} to ${options.output_dir}...`)
 
-    // set options (extend defaults.json with package.json#font with CLI args)
-    let font = extend(defaults, packageJson.font, {
-          name: packageJson.name
-        })
-      , fontHeight = font.ascent - font.descent
+  return readPackageJson()
+    .then(function (contents) {
 
-        // template data
-      , data = {
-          font: font,
-          glyphs: [],
-          fontHeight: fontHeight,
-          fontFamily: packageJson.name,
-          prefix: options.prefix || getPrefix(packageJson.name),
-          hex: generateRandomHex()
-        }
+      packageJson = contents
 
-    console.log(`Generating font "${ font.name }"...`)
-
-    return prepare(options.input_dir, fontHeight).then(function (glyphs) {
-      return generate(font, options, extend(data, {
-        glyphs: glyphs
-      }))
     })
+    .catch(function (err) {
 
-  })
+      if (err.code == 'ENOENT') {
+        console.warn(`No package.json found in ${process.cwd()}`)
+      }
+
+    })
+    .finally(function () {
+
+      // get folder name
+      let nameFromPath = last(
+        normalizePath(process.cwd())
+        .slice(0, -1)
+        .split('/')
+      )
+
+      // set options (extend defaults.json with package.json#font with CLI args)
+      let font = merge(
+            defaults,
+            packageJson.font,
+            { name: nameFromPath },
+            { name: packageJson.name },
+            { name: options.name }
+          )
+        , fontHeight = font.ascent - font.descent
+
+          // template data
+        , data = {
+            font: font,
+            glyphs: [],
+            fontHeight: fontHeight,
+            fontFamily: font.name,
+            prefix: options.prefix || getPrefix(font.name),
+            hex: generateRandomHex()
+          }
+
+      console.log(`Generating font "${ font.name }"...`)
+
+      return prepare(options.input_dir, fontHeight).then(function (glyphs) {
+        return generate(font, options, extend(data, {
+          glyphs: glyphs
+        }))
+      })
+
+    })
 
 }
 

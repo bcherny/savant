@@ -18,7 +18,9 @@ var resolve = require('path').resolve;
 var extend = require('lodash').extend;
 var first = require('lodash').first;
 var forEach = require('lodash').forEach;
+var last = require('lodash').last;
 var map = require('lodash').map;
+var merge = require('lodash').merge;
 var all = require('q').all;
 var defer = require('q').defer;
 var when = require('q').when;
@@ -46,6 +48,8 @@ var svg2ttfBin = "../node_modules/.bin/svg2ttf", ttf2woffBin = "../node_modules/
 var rgxUnicode = /([a-f][a-f\d]{3,4})/i, rgxName = /-(.+).svg/, rgxAcronym = /\b([\w\d])/ig;
 
 function compile(options) {
+  var packageJson = {};
+
   // ensure that input and output dirs are defined
   if (!options.input_dir) throw new TypeError("svgs-to-fonts#compile expects an options hash with an \"input_dir\" property");
 
@@ -55,19 +59,28 @@ function compile(options) {
   options.input_dir = normalizePath(options.input_dir);
   options.output_dir = normalizePath(options.output_dir);
 
-  return readPackageJson().then(function (packageJson) {
+  console.log("Compiling from " + options.input_dir + " to " + options.output_dir + "...");
+
+  return readPackageJson().then(function (contents) {
+    packageJson = contents;
+  })["catch"](function (err) {
+    if (err.code == "ENOENT") {
+      console.warn("No package.json found in " + process.cwd());
+    }
+  })["finally"](function () {
+    // get folder name
+    var nameFromPath = last(normalizePath(process.cwd()).slice(0, -1).split("/"));
+
     // set options (extend defaults.json with package.json#font with CLI args)
-    var font = extend(defaults, packageJson.font, {
-      name: packageJson.name
-    }), fontHeight = font.ascent - font.descent
+    var font = merge(defaults, packageJson.font, { name: nameFromPath }, { name: packageJson.name }, { name: options.name }), fontHeight = font.ascent - font.descent
 
     // template data
     , data = {
       font: font,
       glyphs: [],
       fontHeight: fontHeight,
-      fontFamily: packageJson.name,
-      prefix: options.prefix || getPrefix(packageJson.name),
+      fontFamily: font.name,
+      prefix: options.prefix || getPrefix(font.name),
       hex: generateRandomHex()
     };
 
