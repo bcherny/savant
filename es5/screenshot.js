@@ -2,6 +2,8 @@
 
 exports.shoot = shoot;
 var writeFile = require('fs').writeFile;
+var basename = require('path').basename;
+var dirname = require('path').dirname;
 var resolve = require('path').resolve;
 var defer = require('q').defer;
 var express = require('express');
@@ -17,9 +19,9 @@ function shoot(srcPath, destFile, port) {
   var deferred = defer();
 
   // start a server
-  express().use("/", express["static"](srcPath)).listen(port);
+  express().use("/", express["static"](dirname(srcPath))).listen(port);
 
-  console.log("Serving \"" + srcPath + "\" on port " + port);
+  console.log("Serving \"" + dirname(srcPath) + "\" on port " + port);
 
   // shoot it!
   var chrome = steer({
@@ -32,7 +34,7 @@ function shoot(srcPath, destFile, port) {
     chrome.inspector.Page.enable(function (err) {
       if (err) return deferred.reject("error enabling", err);
 
-      chrome.inspector.Page.navigate("http://127.0.0.1:" + port, function (err) {
+      chrome.inspector.Page.navigate("http://127.0.0.1:" + port + "/" + basename(srcPath), function (err) {
         if (err) return deferred.reject("error navigating", err);
 
         chrome.inspector.Page.once("domContentEventFired", function () {

@@ -1,5 +1,5 @@
 import { writeFile } from 'fs'
-import { resolve } from 'path'
+import { basename, dirname, resolve } from 'path'
 import { defer } from 'q'
 import * as express from 'express'
 import * as steer from 'steer'
@@ -11,10 +11,10 @@ export function shoot (srcPath, destFile, port = 1234) {
 
   // start a server
   express()
-  .use('/', express.static(srcPath))
+  .use('/', express.static(dirname(srcPath)))
   .listen(port)
 
-  console.log(`Serving "${srcPath}" on port ${port}`)
+  console.log(`Serving "${dirname(srcPath)}" on port ${port}`)
 
   // shoot it!
   let chrome = steer({
@@ -28,7 +28,7 @@ export function shoot (srcPath, destFile, port = 1234) {
 
       if (err) return deferred.reject('error enabling', err)
 
-      chrome.inspector.Page.navigate(`http://127.0.0.1:${port}`, function (err) {
+      chrome.inspector.Page.navigate(`http://127.0.0.1:${port}/${basename(srcPath)}`, function (err) {
 
         if (err) return deferred.reject('error navigating', err)
 
