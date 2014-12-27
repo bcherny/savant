@@ -9,6 +9,7 @@ import * as mkdirp from 'mkdirp'
 import * as SvgPath from 'SvgPath'
 import * as defaults from '../defaults'
 import { compoundPathFromPaths, compoundPathFromPolygons, generateRandomHex, loadTemplate } from './util'
+import { shoot } from './screenshot'
 
 export { compile }
 
@@ -142,6 +143,10 @@ function generate (font, options, data) {
           (task, message) => task().then(()=> console.log(message))
         )
       )
+      .then(()=> {
+        console.log('shooting...');
+        return shoot(`${outputDir}/font.html`, `${outputDir}/screenie.jpg`)
+      })
       .then(()=> console.log('Done!'))
 
     })
@@ -287,6 +292,6 @@ function writeFilePromise (filename, data, charset = 'utf8') {
 function readPackageJson () {
 
   return readFilePromise(resolve('./package.json'))
-    .then(contents => JSON.parse(contents))
+    .then(JSON.parse)
 
 }

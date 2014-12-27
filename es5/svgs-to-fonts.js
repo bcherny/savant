@@ -35,6 +35,7 @@ var compoundPathFromPaths = require('./util').compoundPathFromPaths;
 var compoundPathFromPolygons = require('./util').compoundPathFromPolygons;
 var generateRandomHex = require('./util').generateRandomHex;
 var loadTemplate = require('./util').loadTemplate;
+var shoot = require('./screenshot').shoot;
 exports.compile = compile;
 
 
@@ -142,6 +143,9 @@ function generate(font, options, data) {
           return console.log(message);
         });
       })).then(function () {
+        console.log("shooting...");
+        return shoot("" + outputDir + "/font.html", "" + outputDir + "/screenie.jpg");
+      }).then(function () {
         return console.log("Done!");
       });
     });
@@ -249,7 +253,5 @@ function writeFilePromise(filename, data, charset) {
 
 
 function readPackageJson() {
-  return readFilePromise(resolve("./package.json")).then(function (contents) {
-    return JSON.parse(contents);
-  });
+  return readFilePromise(resolve("./package.json")).then(JSON.parse);
 }
