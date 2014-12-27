@@ -12,67 +12,78 @@ var exec = require('child_process').exec;
 var readFile = require('fs').readFile;
 var writeFile = require('fs').writeFile;
 var basename = require('path').basename;
+var dirname = require('path').dirname;
+var normalize = require('path').normalize;
 var resolve = require('path').resolve;
 var extend = require('lodash').extend;
 var first = require('lodash').first;
 var forEach = require('lodash').forEach;
+var map = require('lodash').map;
 var all = require('q').all;
 var defer = require('q').defer;
 var when = require('q').when;
 var DOMParser = require('xmldom').DOMParser;
 var glob = require('glob');
 
+var mkdirp = require('mkdirp');
+
 var SvgPath = require('SvgPath');
 
 var defaults = require('../defaults');
 
-var util = require('./util');
-
+var compoundPathFromPaths = require('./util').compoundPathFromPaths;
+var compoundPathFromPolygons = require('./util').compoundPathFromPolygons;
+var generateRandomHex = require('./util').generateRandomHex;
+var loadTemplate = require('./util').loadTemplate;
 exports.compile = compile;
 
+
+// binaries
+var svg2ttfBin = "../node_modules/.bin/svg2ttf", ttf2woffBin = "../node_modules/.bin/ttf2woff", ttf2eotBin = "../node_modules/.bin/ttf2eot";
 
 // regexes
 var rgxUnicode = /([a-f][a-f\d]{3,4})/i, rgxName = /-(.+).svg/, rgxAcronym = /\b([\w\d])/ig;
 
-function compile(args) {
-  return readPackageJson().then(function (config) {
-    try {
-      var _ret = (function () {
-        // set options (extend defaults.json with package.json#font with CLI args)
-        var font = extend(defaults, config.font, args), fontHeight = font.ascent - font.descent
+function compile(options) {
+  // ensure that input and output dirs are defined
+  if (!options.input_dir) throw new TypeError("svgs-to-fonts#compile expects an options hash with an \"input_dir\" property");
 
-        // template data
-        , data = {
-          font: font,
-          glyphs: [],
-          fontHeight: fontHeight,
-          fontFamily: config.name,
-          prefix: args.prefix || getPrefix(config.name),
-          hex: util.generateRandomHex()
-        };
+  if (!options.output_dir) throw new TypeError("svgs-to-fonts#compile expects an options hash with an \"output_dir\" property");
 
-        console.log("Scaling images...");
+  // normalize paths
+  options.input_dir = normalizePath(options.input_dir);
+  options.output_dir = normalizePath(options.output_dir);
 
-        return {
-          v: prepare(args.input_dir, fontHeight).then(function (glyphs) {
-            return generate(config, extend(data, {
-              glyphs: glyphs
-            }));
-          })
-        };
-      })();
+  return readPackageJson().then(function (packageJson) {
+    // set options (extend defaults.json with package.json#font with CLI args)
+    var font = extend(defaults, packageJson.font, {
+      name: packageJson.name
+    }), fontHeight = font.ascent - font.descent
 
-      if (typeof _ret === "object") return _ret.v;
-    } catch (err) {
-      console.log(err);
-    }
+    // template data
+    , data = {
+      font: font,
+      glyphs: [],
+      fontHeight: fontHeight,
+      fontFamily: packageJson.name,
+      prefix: options.prefix || getPrefix(packageJson.name),
+      hex: generateRandomHex()
+    };
+
+    console.log("Generating font \"" + font.name + "\"...");
+
+    return prepare(options.input_dir, fontHeight).then(function (glyphs) {
+      return generate(font, options, extend(data, {
+        glyphs: glyphs
+      }));
+    });
   });
 }
 
 function prepare(inputDir, fontHeight) {
   // Generate normalized glyphs
   return globPromise("" + inputDir + "/*.svg").then(function (files) {
-    console.info("Found " + files.length + " files");
+    console.info("Found " + files.length + " files in " + inputDir);
 
     return all(files.map(function (file) {
       // get unicode and glyph name from file name
@@ -81,7 +92,7 @@ function prepare(inputDir, fontHeight) {
       // check for unicode
       if (!unicode) throw new (Error(_taggedTemplateLiteral(["Expected ", " to be in the format 'xxxx-icon-name.svg'"], ["Expected ", " to be in the format 'xxxx-icon-name.svg'"]), file))();
 
-      // normalize glyph
+      // normalize glyphs
       return readFilePromise(file).then(function (contents) {
         var glyph = parse(contents.toString(), file), ratio = fontHeight / glyph.height;
 
@@ -96,41 +107,42 @@ function prepare(inputDir, fontHeight) {
   });
 }
 
-function generate(config, data) {
-  // load templates
-  loadTemplates().spread(function (svgTemplate, cssTemplate, sassTemplate, htmlTemplate) {
-    var svg = "" + data.font.output_dir + "/" + config.name + ".svg", ttf = "" + data.font.output_dir + "/" + config.name + ".ttf", tasks = {
-      "Generating SVG": function (_) {
-        return writeFilePromise(svg, svgTemplate(data));
-      },
-      "Generating TTF": function (_) {
-        return execPromise(resolve(__dirname, "../node_modules/.bin/svg2ttf " + svg + " " + ttf));
-      },
-      "Generating WOFF": function (_) {
-        return execPromise(resolve(__dirname, "../node_modules/.bin/ttf2woff " + ttf + " " + data.font.output_dir + "/" + config.name + ".woff"));
-      },
-      "Generating EOT": function (_) {
-        return execPromise(resolve(__dirname, "../node_modules/.bin/ttf2eot " + ttf + " " + data.font.output_dir + "/" + config.name + ".eot"));
-      },
-      "Generating CSS": function (_) {
-        return writeFilePromise(resolve(process.cwd(), "./dist/font.css"), cssTemplate(data));
-      },
-      "Generating SASS": function (_) {
-        return writeFilePromise(resolve(process.cwd(), "./dist/font.scss"), sassTemplate(data));
-      },
-      "Generating HTML spec": function (_) {
-        return writeFilePromise(resolve(process.cwd(), "./dist/font.html"), htmlTemplate(data));
-      },
-      "Done!": function (_) {
-        return when();
-      }
-    };
+function generate(font, options, data) {
+  console.log("Lazy-creating destination directory \"" + options.output_dir + "\"...");
 
-    forEach(tasks, function (fn, message) {
-      fn().then(function (_) {
-        console.log(message);
-      }, function (err) {
-        console.log("err", err.stack);
+  // create destination dir?
+  return mkdirpPromise(options.output_dir).then(function () {
+    // load templates
+    return loadTemplates().spread(function (svgTemplate, cssTemplate, sassTemplate, htmlTemplate) {
+      // generate
+      var outputDir = resolve(options.output_dir), svg = "" + outputDir + "/" + font.name + ".svg", ttf = "" + outputDir + "/" + font.name + ".ttf", woff = "" + outputDir + "/" + font.name + ".woff", eot = "" + outputDir + "/" + font.name + ".eot", tasks = {
+        "Generated SVG font": function () {
+          return writeFilePromise(svg, svgTemplate(data));
+        },
+        "Generated TTF, WOFF, and EOT fonts": function () {
+          // these must be executed in sequence
+          return execPromise(resolve(__dirname, "" + svg2ttfBin + " " + svg + " " + ttf)).then(function () {
+            return execPromise(resolve(__dirname, "" + ttf2woffBin + " " + ttf + " " + woff));
+          }).then(function () {
+            return execPromise(resolve(__dirname, "" + ttf2eotBin + " " + ttf + " " + eot));
+          });
+        },
+        "Generated CSS": function () {
+          return writeFilePromise("" + outputDir + "/font.css", cssTemplate(data));
+        },
+        "Generated SASS": function () {
+          return writeFilePromise("" + outputDir + "/font.scss", sassTemplate(data));
+        },
+        "Generated HTML spec": function () {
+          return writeFilePromise("" + outputDir + "/font.html", htmlTemplate(data));
+        } };
+
+      return all(map(tasks, function (task, message) {
+        return task().then(function () {
+          return console.log(message);
+        });
+      })).then(function () {
+        return console.log("Done!");
       });
     });
   });
@@ -153,7 +165,7 @@ function parse(data, filename) {
   return {
     height: height,
     width: width,
-    d: "" + util.compoundPathFromPaths(paths) + " " + util.compoundPathFromPolygons(polygons)
+    d: "" + compoundPathFromPaths(paths) + " " + compoundPathFromPolygons(polygons)
   };
 }
 
@@ -165,8 +177,17 @@ function parse(data, filename) {
  * Utilities
  */
 
+function normalizePath(path) {
+  path = resolve(normalize(path));
+
+  // add trailing slashes (wish we could use #endsWith :[)
+  if (path.slice(-1) != "/") path += "/";
+
+  return path;
+}
+
 function loadTemplates() {
-  return all([util.loadTemplate("../templates/font.svg"), util.loadTemplate("../templates/font.css"), util.loadTemplate("../templates/font.scss"), util.loadTemplate("../templates/font.html")]);
+  return all([loadTemplate("../templates/font.svg"), loadTemplate("../templates/font.css"), loadTemplate("../templates/font.scss"), loadTemplate("../templates/font.html")]);
 }
 
 function getPrefix(name) {
@@ -177,9 +198,7 @@ function execPromise(command) {
   var deferred = defer();
 
   exec(command, function (err, stdout, stderr) {
-    if (err) deferred.reject(err);
-
-    deferred.resolve(stdout);
+    return err ? deferred.reject(err) : deferred.resolve(stdout);
   });
 
   return deferred.promise;
@@ -189,9 +208,17 @@ function globPromise(path, options) {
   var deferred = defer();
 
   glob(path, options, function (err, files) {
-    if (err) deferred.reject(err);
+    return err ? deferred.reject(err) : deferred.resolve(files);
+  });
 
-    deferred.resolve(files);
+  return deferred.promise;
+}
+
+function mkdirpPromise(path) {
+  var deferred = defer();
+
+  mkdirp(path, function (err) {
+    return err ? deferred.reject(err) : deferred.resolve();
   });
 
   return deferred.promise;
@@ -201,9 +228,7 @@ function readFilePromise(filename) {
   var deferred = defer();
 
   readFile(filename, function (err, contents) {
-    if (err) deferred.reject(err);
-
-    deferred.resolve(contents);
+    return err ? deferred.reject(err) : deferred.resolve(contents);
   });
 
   return deferred.promise;
@@ -215,12 +240,8 @@ function writeFilePromise(filename, data, charset) {
 
   var deferred = defer();
 
-  console.log("write", filename, data);
-
   writeFile(filename, data, charset, function (err) {
-    if (err) return deferred.reject(err);
-
-    deferred.resolve();
+    return err ? deferred.reject(err) : deferred.resolve();
   });
 
   return deferred.promise;

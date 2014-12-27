@@ -1,29 +1,46 @@
 import { exec } from 'child_process'
 import { readFile, writeFile } from 'fs'
-import { basename, resolve } from 'path'
-import { extend, first, forEach } from 'lodash'
+import { basename, dirname, normalize, resolve } from 'path'
+import { extend, first, forEach, map } from 'lodash'
 import { all, defer, when } from 'q'
 import { DOMParser } from 'xmldom'
 import * as glob from 'glob'
+import * as mkdirp from 'mkdirp'
 import * as SvgPath from 'SvgPath'
 import * as defaults from '../defaults'
-import * as util from './util'
+import { compoundPathFromPaths, compoundPathFromPolygons, generateRandomHex, loadTemplate } from './util'
 
 export { compile }
+
+// binaries
+const svg2ttfBin = '../node_modules/.bin/svg2ttf'
+    , ttf2woffBin = '../node_modules/.bin/ttf2woff'
+    , ttf2eotBin = '../node_modules/.bin/ttf2eot'
 
 // regexes
 const rgxUnicode = /([a-f][a-f\d]{3,4})/i
     , rgxName = /-(.+).svg/
     , rgxAcronym = /\b([\w\d])/ig
 
-function compile (args) {
+function compile (options) {
 
-  return readPackageJson().then(function (config) {
+  // ensure that input and output dirs are defined
+  if (!options.input_dir)
+    throw new TypeError('svgs-to-fonts#compile expects an options hash with an "input_dir" property')
 
-    try {
+  if (!options.output_dir)
+    throw new TypeError('svgs-to-fonts#compile expects an options hash with an "output_dir" property')
+
+  // normalize paths
+  options.input_dir = normalizePath(options.input_dir)
+  options.output_dir = normalizePath(options.output_dir)
+
+  return readPackageJson().then(function (packageJson) {
 
     // set options (extend defaults.json with package.json#font with CLI args)
-    let font = extend(defaults, config.font, args)
+    let font = extend(defaults, packageJson.font, {
+          name: packageJson.name
+        })
       , fontHeight = font.ascent - font.descent
 
         // template data
@@ -31,22 +48,18 @@ function compile (args) {
           font: font,
           glyphs: [],
           fontHeight: fontHeight,
-          fontFamily: config.name,
-          prefix: args.prefix || getPrefix(config.name),
-          hex: util.generateRandomHex()
+          fontFamily: packageJson.name,
+          prefix: options.prefix || getPrefix(packageJson.name),
+          hex: generateRandomHex()
         }
 
-    console.log('Scaling images...')
+    console.log(`Generating font "${ font.name }"...`)
 
-    return prepare(args.input_dir, fontHeight).then(function (glyphs) {
-      return generate(config, extend(data, {
+    return prepare(options.input_dir, fontHeight).then(function (glyphs) {
+      return generate(font, options, extend(data, {
         glyphs: glyphs
       }))
     })
-
-  } catch (err) {
-    console.log(err)
-  }
 
   })
 
@@ -57,7 +70,7 @@ function prepare (inputDir, fontHeight) {
   // Generate normalized glyphs
   return globPromise(`${ inputDir }\/*.svg`).then(function (files) {
 
-    console.info(`Found ${ files.length } files`)
+    console.info(`Found ${ files.length } files in ${ inputDir }`)
 
     return all(files.map(function (file) {
 
@@ -69,7 +82,7 @@ function prepare (inputDir, fontHeight) {
       if (!unicode)
         throw new Error `Expected ${file} to be in the format 'xxxx-icon-name.svg'`
 
-      // normalize glyph
+      // normalize glyphs
       return readFilePromise(file).then(function (contents) {
 
         let glyph = parse(contents.toString(), file)
@@ -94,29 +107,43 @@ function prepare (inputDir, fontHeight) {
 
 }
 
-function generate (config, data) {
+function generate (font, options, data) {
 
-  // load templates
-  loadTemplates().spread(function (svgTemplate, cssTemplate, sassTemplate, htmlTemplate) {
+  console.log(`Lazy-creating destination directory "${options.output_dir}"...`)
 
-    let svg = `${ data.font.output_dir }/${ config.name }.svg`
-      , ttf = `${ data.font.output_dir }/${ config.name }.ttf`
-      , tasks = {
-          'Generating SVG': _ => writeFilePromise(svg, svgTemplate(data)),
-          'Generating TTF': _ => execPromise(resolve(__dirname, `../node_modules/.bin/svg2ttf ${svg} ${ttf}`)),
-          'Generating WOFF': _ => execPromise(resolve(__dirname, `../node_modules/.bin/ttf2woff ${ttf} ${data.font.output_dir}/${config.name}.woff`)),
-          'Generating EOT': _ => execPromise(resolve(__dirname, `../node_modules/.bin/ttf2eot ${ttf} ${data.font.output_dir}/${config.name}.eot`)),
-          'Generating CSS': _ => writeFilePromise(resolve(process.cwd(), './dist/font.css'), cssTemplate(data)),
-          'Generating SASS': _ => writeFilePromise(resolve(process.cwd(), './dist/font.scss'), sassTemplate(data)),
-          'Generating HTML spec': _ => writeFilePromise(resolve(process.cwd(), './dist/font.html'), htmlTemplate(data)),
-          'Done!': _ => when()
-        }
+  // create destination dir?
+  return mkdirpPromise(options.output_dir).then(()=> {
 
-    forEach(tasks, (fn, message) => {
-      fn().then(
-        _ => {console.log(message) },
-        err => { console.log('err', err.stack)}
+    // load templates
+    return loadTemplates().spread(function (svgTemplate, cssTemplate, sassTemplate, htmlTemplate) {
+
+      // generate 
+      let outputDir = resolve(options.output_dir)
+        , svg = `${outputDir}/${font.name}.svg`
+        , ttf = `${outputDir}/${font.name}.ttf`
+        , woff = `${outputDir}/${font.name}.woff`
+        , eot = `${outputDir}/${font.name}.eot`
+        , tasks = {
+            'Generated SVG font': ()=> writeFilePromise(svg, svgTemplate(data)),
+            'Generated TTF, WOFF, and EOT fonts': ()=> {
+              // these must be executed in sequence
+              return execPromise(resolve(__dirname, `${svg2ttfBin} ${svg} ${ttf}`))
+              .then(()=> execPromise(resolve(__dirname, `${ttf2woffBin} ${ttf} ${woff}`)))
+              .then(()=> execPromise(resolve(__dirname, `${ttf2eotBin} ${ttf} ${eot}`)))
+            },
+            'Generated CSS': ()=> writeFilePromise(`${outputDir}/font.css`, cssTemplate(data)),
+            'Generated SASS': ()=> writeFilePromise(`${outputDir}/font.scss`, sassTemplate(data)),
+            'Generated HTML spec': ()=> writeFilePromise(`${outputDir}/font.html`, htmlTemplate(data)),
+          }
+
+      return all(
+        map(
+          tasks,
+          (task, message) => task().then(()=> console.log(message))
+        )
       )
+      .then(()=> console.log('Done!'))
+
     })
 
   })
@@ -148,7 +175,7 @@ function parse (data, filename) {
   return {
     height: height,
     width: width,
-    d: `${ util.compoundPathFromPaths(paths) } ${ util.compoundPathFromPolygons(polygons) }`
+    d: `${ compoundPathFromPaths(paths) } ${ compoundPathFromPolygons(polygons) }`
   }
 
 }
@@ -161,12 +188,24 @@ function parse (data, filename) {
  * Utilities
  */
 
+function normalizePath (path) {
+
+  path = resolve(normalize(path))
+
+  // add trailing slashes (wish we could use #endsWith :[)
+  if (path.slice(-1) != '/')
+    path += '/'
+
+  return path
+
+}
+
 function loadTemplates () {
   return all([
-    util.loadTemplate('../templates/font.svg'),
-    util.loadTemplate('../templates/font.css'),
-    util.loadTemplate('../templates/font.scss'),
-    util.loadTemplate('../templates/font.html')
+    loadTemplate('../templates/font.svg'),
+    loadTemplate('../templates/font.css'),
+    loadTemplate('../templates/font.scss'),
+    loadTemplate('../templates/font.html')
   ])
 }
 
@@ -180,9 +219,7 @@ function execPromise (command) {
 
   exec(command, function (err, stdout, stderr) {
 
-    if (err) deferred.reject(err)
-
-    deferred.resolve(stdout)
+    return err ? deferred.reject(err) : deferred.resolve(stdout)
 
   })
 
@@ -196,9 +233,21 @@ function globPromise (path, options) {
 
   glob(path, options, function (err, files) {
 
-    if (err) deferred.reject(err)
+    return err ? deferred.reject(err) : deferred.resolve(files)
 
-    deferred.resolve(files)
+  })
+
+  return deferred.promise
+
+}
+
+function mkdirpPromise (path) {
+
+  let deferred = defer()
+
+  mkdirp(path, function (err) {
+
+    return err ? deferred.reject(err) : deferred.resolve()
 
   })
 
@@ -212,9 +261,7 @@ function readFilePromise (filename) {
 
   readFile(filename, function (err, contents) {
 
-    if (err) deferred.reject(err)
-
-    deferred.resolve(contents)
+    return err ? deferred.reject(err) : deferred.resolve(contents)
 
   })
 
@@ -226,13 +273,9 @@ function writeFilePromise (filename, data, charset = 'utf8') {
 
   let deferred = defer()
 
-  console.log('write', filename, data)
-
   writeFile(filename, data, charset, function (err) {
 
-    if (err) return deferred.reject(err)
-
-    deferred.resolve()
+    return err ? deferred.reject(err) : deferred.resolve()
 
   })
 
