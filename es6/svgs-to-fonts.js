@@ -153,17 +153,24 @@ function generate (font, options, data) {
         , ttf = `${outputDir}/${font.name}.ttf`
         , woff = `${outputDir}/${font.name}.woff`
         , eot = `${outputDir}/${font.name}.eot`
+        , cssPath = `${outputDir}/${font.name}.css`
+        , sassPath = `${outputDir}/${font.name}.scss`
+        , htmlSpecPath = `${outputDir}/${font.name}-spec.html`
         , tasks = {
-            'Generated SVG font': ()=> writeFilePromise(svg, svgTemplate(data)),
-            'Generated TTF, WOFF, and EOT fonts': ()=> {
-              // these must be executed in sequence
+            'Generated SVG font': () => writeFilePromise(svg, svgTemplate(data)),
+            'Generated TTF, WOFF, and EOT fonts': () => {
+              // execute these in sequence
               return execPromise(resolve(__dirname, `${svg2ttfBin} ${svg} ${ttf}`))
-              .then(()=> execPromise(resolve(__dirname, `${ttf2woffBin} ${ttf} ${woff}`)))
-              .then(()=> execPromise(resolve(__dirname, `${ttf2eotBin} ${ttf} ${eot}`)))
+              .then(() => execPromise(resolve(__dirname, `${ttf2woffBin} ${ttf} ${woff}`)))
+              .then(() => execPromise(resolve(__dirname, `${ttf2eotBin} ${ttf} ${eot}`)))
             },
-            'Generated CSS': ()=> writeFilePromise(`${outputDir}/font.css`, cssTemplate(data)),
-            'Generated SASS': ()=> writeFilePromise(`${outputDir}/font.scss`, sassTemplate(data)),
-            'Generated HTML spec': ()=> writeFilePromise(`${outputDir}/font.html`, htmlTemplate(data)),
+            'Generated CSS': () => writeFilePromise(cssPath, cssTemplate(data)),
+            'Generated SASS': () => writeFilePromise(sassPath, sassTemplate(data)),
+            'Generated HTML spec': () => {
+              return writeFilePromise(htmlSpecPath, htmlTemplate(
+                extend(data, { cssPath: basename(cssPath) })
+              ))
+            },
           }
 
       return all(
@@ -172,14 +179,10 @@ function generate (font, options, data) {
           (task, message) => task().then(()=> console.log(message))
         )
       )
-      .then(()=> {
-        console.log('shooting...');
-        return shoot(`${outputDir}/font.html`, `${outputDir}/screenie.jpg`)
-          .then(
-            ()=>{ /* eat it */ },
-            (err) => { console.error('error!', err)}
-      })
+      .then(() => shoot(htmlSpecPath, `${outputDir}/${font.name}-spec.png`))
+      .then(() => 'Generated screenshot' )
       .then(()=> console.log('Done!'))
+      .catch(e => console.error(e))
 
     })
 

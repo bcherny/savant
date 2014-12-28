@@ -15,35 +15,34 @@ function _shoot (chrome, port, srcPath, destFile) {
       if (err) return deferred.reject('error enabling', err)
 
       // fix occasional "Error: No page with the given url was found"
-      setTimeout(()=>{
+      setTimeout(() => {
 
         chrome.inspector.Page.navigate(`http://127.0.0.1:${port}/${basename(srcPath)}`, function (err) {
 
           if (err) return deferred.reject('error navigating', err)
 
-            // fix occasional issue when icons don't render in time
-          setTimeout(()=>{
-
             chrome.inspector.Page.once('loadEventFired', function () {
 
-              screenshot(chrome, 100, function (err, buffer, attempts) {
+              // fix occasional issue when icons don't render in time
+              setTimeout(() => {
 
-                if (err) return deferred.reject('error shooting', err)
+                // capture a screenshot @ quality=100
+                screenshot(chrome, { format: 'png' }, function (err, buffer, attempts) {
 
-                writeFile(destFile, buffer, function (err) {
+                  if (err) return deferred.reject('error shooting', err)
 
-                  if (err) return deferred.reject('error saving screenshot to disk', err)
-                  
-                  console.log(`Saved screenshot to ${destFile}`)
+                  writeFile(destFile, buffer, function (err) {
 
-                  deferred.resolve()
+                    if (err) return deferred.reject('error saving screenshot to disk', err)
 
+                    deferred.resolve()
+
+                  })
                 })
-              })
+
+              }, 2000)
 
             })
-
-          }, 2000)
 
         })
 
@@ -63,8 +62,6 @@ export function shoot (srcPath, destFile, port = 1234) {
   .use('/', express.static(dirname(srcPath)))
   .listen(port)
 
-  console.log(`Serving "${dirname(srcPath)}" on port ${port}`)
-
   // shoot it!
   let chrome = steer({
     cache: resolve(__dirname, 'cache'),
@@ -74,7 +71,7 @@ export function shoot (srcPath, destFile, port = 1234) {
   })
 
   chrome.on('error', function (err) {
-    console.error('chorme erorr!', err)
+    console.error('chrome errr!', err)
   })
 
   return _shoot(chrome, port, srcPath, destFile).finally(()=> {

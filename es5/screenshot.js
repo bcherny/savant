@@ -24,22 +24,21 @@ function _shoot(chrome, port, srcPath, destFile) {
         chrome.inspector.Page.navigate("http://127.0.0.1:" + port + "/" + basename(srcPath), function (err) {
           if (err) return deferred.reject("error navigating", err);
 
-          // fix occasional issue when icons don't render in time
-          setTimeout(function () {
-            chrome.inspector.Page.once("loadEventFired", function () {
-              screenshot(chrome, 100, function (err, buffer, attempts) {
+          chrome.inspector.Page.once("loadEventFired", function () {
+            // fix occasional issue when icons don't render in time
+            setTimeout(function () {
+              // capture a screenshot @ quality=100
+              screenshot(chrome, { format: "png" }, function (err, buffer, attempts) {
                 if (err) return deferred.reject("error shooting", err);
 
                 writeFile(destFile, buffer, function (err) {
                   if (err) return deferred.reject("error saving screenshot to disk", err);
 
-                  console.log("Saved screenshot to " + destFile);
-
                   deferred.resolve();
                 });
               });
-            });
-          }, 2000);
+            }, 2000);
+          });
         });
       }, 1000);
     });
@@ -55,8 +54,6 @@ function shoot(srcPath, destFile, port) {
   // start a server
   var server = express().use("/", express["static"](dirname(srcPath))).listen(port);
 
-  console.log("Serving \"" + dirname(srcPath) + "\" on port " + port);
-
   // shoot it!
   var chrome = steer({
     cache: resolve(__dirname, "cache"),
@@ -66,7 +63,7 @@ function shoot(srcPath, destFile, port) {
   });
 
   chrome.on("error", function (err) {
-    console.error("chorme erorr!", err);
+    console.error("chrome errr!", err);
   });
 
   return _shoot(chrome, port, srcPath, destFile)["finally"](function () {

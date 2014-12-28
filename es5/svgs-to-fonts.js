@@ -129,12 +129,12 @@ function generate(font, options, data) {
     // load templates
     return loadTemplates().spread(function (svgTemplate, cssTemplate, sassTemplate, htmlTemplate) {
       // generate
-      var outputDir = resolve(options.output_dir), svg = "" + outputDir + "/" + font.name + ".svg", ttf = "" + outputDir + "/" + font.name + ".ttf", woff = "" + outputDir + "/" + font.name + ".woff", eot = "" + outputDir + "/" + font.name + ".eot", tasks = {
+      var outputDir = resolve(options.output_dir), svg = "" + outputDir + "/" + font.name + ".svg", ttf = "" + outputDir + "/" + font.name + ".ttf", woff = "" + outputDir + "/" + font.name + ".woff", eot = "" + outputDir + "/" + font.name + ".eot", cssPath = "" + outputDir + "/" + font.name + ".css", sassPath = "" + outputDir + "/" + font.name + ".scss", htmlSpecPath = "" + outputDir + "/" + font.name + "-spec.html", tasks = {
         "Generated SVG font": function () {
           return writeFilePromise(svg, svgTemplate(data));
         },
         "Generated TTF, WOFF, and EOT fonts": function () {
-          // these must be executed in sequence
+          // execute these in sequence
           return execPromise(resolve(__dirname, "" + svg2ttfBin + " " + svg + " " + ttf)).then(function () {
             return execPromise(resolve(__dirname, "" + ttf2woffBin + " " + ttf + " " + woff));
           }).then(function () {
@@ -142,13 +142,13 @@ function generate(font, options, data) {
           });
         },
         "Generated CSS": function () {
-          return writeFilePromise("" + outputDir + "/font.css", cssTemplate(data));
+          return writeFilePromise(cssPath, cssTemplate(data));
         },
         "Generated SASS": function () {
-          return writeFilePromise("" + outputDir + "/font.scss", sassTemplate(data));
+          return writeFilePromise(sassPath, sassTemplate(data));
         },
         "Generated HTML spec": function () {
-          return writeFilePromise("" + outputDir + "/font.html", htmlTemplate(data));
+          return writeFilePromise(htmlSpecPath, htmlTemplate(extend(data, { cssPath: basename(cssPath) })));
         } };
 
       return all(map(tasks, function (task, message) {
@@ -156,10 +156,13 @@ function generate(font, options, data) {
           return console.log(message);
         });
       })).then(function () {
-        console.log("shooting...");
-        return shoot("" + outputDir + "/font.html", "" + outputDir + "/screenie.jpg");
+        return shoot(htmlSpecPath, "" + outputDir + "/" + font.name + "-spec.png");
+      }).then(function () {
+        return "Generated screenshot";
       }).then(function () {
         return console.log("Done!");
+      })["catch"](function (e) {
+        return console.error(e);
       });
     });
   });
