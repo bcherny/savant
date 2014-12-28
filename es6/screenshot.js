@@ -5,12 +5,61 @@ import * as express from 'express'
 import * as steer from 'steer'
 import * as screenshot from 'steer-screenshot'
 
-export function shoot (srcPath, destFile, port = 1234) {
+function _shoot (chrome, port, srcPath, destFile) {
 
   let deferred = defer()
 
+  chrome.once('open', function () {
+    chrome.inspector.Page.enable(function (err) {
+
+      if (err) return deferred.reject('error enabling', err)
+
+      // fix occasional "Error: No page with the given url was found"
+      setTimeout(()=>{
+
+        chrome.inspector.Page.navigate(`http://127.0.0.1:${port}/${basename(srcPath)}`, function (err) {
+
+          if (err) return deferred.reject('error navigating', err)
+
+            // fix occasional issue when icons don't render in time
+          setTimeout(()=>{
+
+            chrome.inspector.Page.once('loadEventFired', function () {
+
+              screenshot(chrome, 100, function (err, buffer, attempts) {
+
+                if (err) return deferred.reject('error shooting', err)
+
+                writeFile(destFile, buffer, function (err) {
+
+                  if (err) return deferred.reject('error saving screenshot to disk', err)
+                  
+                  console.log(`Saved screenshot to ${destFile}`)
+
+                  deferred.resolve()
+
+                })
+              })
+
+            })
+
+          }, 2000)
+
+        })
+
+      }, 1000)
+
+    })
+  })
+
+  return deferred.promise
+
+}
+
+export function shoot (srcPath, destFile, port = 1234) {
+
   // start a server
-  express()
+  let server = express()
   .use('/', express.static(dirname(srcPath)))
   .listen(port)
 
@@ -20,47 +69,17 @@ export function shoot (srcPath, destFile, port = 1234) {
   let chrome = steer({
     cache: resolve(__dirname, 'cache'),
     inspectorPort: 7510,
-    permissions: ['tabs'] // this module needs `tabs` permissions
-  });
-
-  chrome.once('open', function () {
-    chrome.inspector.Page.enable(function (err) {
-
-      if (err) return deferred.reject('error enabling', err)
-
-      setTimeout(()=>{
-
-        chrome.inspector.Page.navigate(`http://127.0.0.1:${port}/${basename(srcPath)}`, function (err) {
-
-          if (err) return deferred.reject('error navigating', err)
-
-          chrome.inspector.Page.once('domContentEventFired', function () {
-
-            // The second argument (100) is the JPEG quality
-            screenshot(chrome, 100, function (err, buffer, attemps) {
-
-              if (err) return deferred.reject('error shooting', err)
-
-              console.log('Screenshot taken after ' + attemps + ' attemps')
-
-              writeFile(destFile, buffer, function (err) {
-
-                if (err) return deferred.reject('error saving screenshot to disk', err)
-                
-                console.log(`Saved screenshot to ${destFile}`)
-
-                deferred.resolve()
-
-              })
-            })
-          })
-        })
-
-      })
-  
-    })
+    permissions: ['tabs'], // this module needs `tabs` permissions
+    size: [1280, 1024]
   })
 
-  return deferred.promise
+  chrome.on('error', function (err) {
+    console.error('chorme erorr!', err)
+  })
+
+  return _shoot(chrome, port, srcPath, destFile).finally(()=> {
+    chrome.close()
+    server.close()
+  })
 
 }

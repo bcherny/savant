@@ -108,8 +108,6 @@ function prepare (inputDir, fontHeight) {
         , name = fileBasename.match(rgxName)[0]
         , unicode = fileBasename.match(rgxUnicode)[0]
 
-      console.log('name=', name, ', unicode=', unicode)
-
       // check for unicode
       if (!unicode)
         throw new Error `Expected ${fileBasename} to be in the format 'xxxx-icon-name.svg'`
@@ -177,6 +175,9 @@ function generate (font, options, data) {
       .then(()=> {
         console.log('shooting...');
         return shoot(`${outputDir}/font.html`, `${outputDir}/screenie.jpg`)
+          .then(
+            ()=>{ /* eat it */ },
+            (err) => { console.error('error!', err)}
       })
       .then(()=> console.log('Done!'))
 

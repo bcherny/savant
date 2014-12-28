@@ -103,8 +103,6 @@ function prepare(inputDir, fontHeight) {
       // get unicode and glyph name from file name
       var fileBasename = basename(file), name = fileBasename.match(rgxName)[0], unicode = fileBasename.match(rgxUnicode)[0];
 
-      console.log("name=", name, ", unicode=", unicode);
-
       // check for unicode
       if (!unicode) throw new (Error(_taggedTemplateLiteral(["Expected ", " to be in the format 'xxxx-icon-name.svg'"], ["Expected ", " to be in the format 'xxxx-icon-name.svg'"]), fileBasename))();
 
