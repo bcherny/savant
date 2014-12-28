@@ -33,18 +33,20 @@ Run `savant -i src -o dist`, which generates a `dist/` folder for you, containin
 ### CLI usage
 
 ```bash
-savant --in inputDir --out outputDir
+savant --in [input_dir] --out [output_dir] --name [font_name] --prefix [prefix]
 
 # eg.
-savant --in src/ --out dist/
+savant --in src/ --out dist/ --name my-font --prefix abc
 ```
+
+`in` and `out` are required, while `name` and `prefix` are optional
 
 ### Programmatic usage
 
 ```js
 #!/usr/bin/env node
 
-require('svgs-to-fonts')
+require('savant')
 .compile({
   input_dir: './src',
   output_dir: './dist'
@@ -53,6 +55,23 @@ require('svgs-to-fonts')
   console.log('done!')
 })
 ```
+
+## q&a
+
+**How does savant know what to name my font?**
+
+If you pass a name in via the CLI or programmatic interface, savant will use that.
+If you run the `savant` command from a folder that contains a package.json, and that package.json has a `name` field, savant will fall back to that.
+Otherwise, savant will fall back to the name of the folder that you ran the `savant` command from.
+
+**How does savant know how to prefix my font's CSS classes?**
+
+If you pass a prefix in via the CLI or programmatic interface, savant will use that.
+Otherwise, savant will compute a prefix based on your font name (eg. "my-awesome-font" will become "maf")
+
+## todo
+
+- tests
 
 ## based on
 
