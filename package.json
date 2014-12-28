@@ -1,6 +1,6 @@
 {
   "name": "savant",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Easily generate webfonts from a folder of SVG icons",
   "main": "es5/savant.js",
   "bin": "es5/cli.js",
