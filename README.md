@@ -33,7 +33,7 @@ Run `savant -i src -o dist`, which generates a `dist/` folder for you, containin
 ### CLI usage
 
 ```bash
-savant inputDir outputDir
+savant --in inputDir --out outputDir
 
 # eg.
 savant --in src/ --out dist/
