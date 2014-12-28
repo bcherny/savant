@@ -1,0 +1,38 @@
+@font-face {
+	font-family: 'demo';
+	src:url('demo.eot?-3c9bc9');
+	src:url('demo.eot?#iefix-3c9bc9') format('embedded-opentype'),
+		url('demo.woff?-3c9bc9') format('woff'),
+		url('demo.ttf?-3c9bc9') format('truetype'),
+		url('demo.svg?-3c9bc9#demo') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}
+
+[class^="d-"]:before,
+[class*=" d-"]:before {
+	font-family: "demo";
+	speak: none;
+	font-style: normal;
+	font-weight: normal;
+	font-variant: normal;
+	text-transform: none;
+	line-height: 1;
+
+	/* Better Font Rendering =========== */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+
+	.d-puzzle-circle:before {
+		content: "\0061";
+	}
+
+	.d-puzzle-pieces:before {
+		content: "\0062";
+	}
+
+	.d-single-puzzle-piece:before {
+		content: "\0063";
+	}
