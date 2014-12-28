@@ -53,3 +53,7 @@ require('svgs-to-fonts')
   console.log('done!')
 })
 ```
+
+## based on
+
+https://github.com/bcherny/svg-font-create
