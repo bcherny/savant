@@ -28,31 +28,36 @@ export function shoot (srcPath, destFile, port = 1234) {
 
       if (err) return deferred.reject('error enabling', err)
 
-      chrome.inspector.Page.navigate(`http://127.0.0.1:${port}/${basename(srcPath)}`, function (err) {
+      setTimeout(()=>{
 
-        if (err) return deferred.reject('error navigating', err)
+        chrome.inspector.Page.navigate(`http://127.0.0.1:${port}/${basename(srcPath)}`, function (err) {
 
-        chrome.inspector.Page.once('domContentEventFired', function () {
+          if (err) return deferred.reject('error navigating', err)
 
-          // The second argument (100) is the JPEG quality
-          screenshot(chrome, 100, function (err, buffer, attemps) {
+          chrome.inspector.Page.once('domContentEventFired', function () {
 
-            if (err) return deferred.reject('error shooting', err)
+            // The second argument (100) is the JPEG quality
+            screenshot(chrome, 100, function (err, buffer, attemps) {
 
-            console.log('Screenshot taken after ' + attemps + ' attemps')
+              if (err) return deferred.reject('error shooting', err)
 
-            writeFile(destFile, buffer, function (err) {
+              console.log('Screenshot taken after ' + attemps + ' attemps')
 
-              if (err) return deferred.reject('error saving srceenshit to disk', err)
-              
-              console.log(`Saved screenshot to ${destFile}`)
+              writeFile(destFile, buffer, function (err) {
 
-              deferred.resolve()
+                if (err) return deferred.reject('error saving screenshot to disk', err)
+                
+                console.log(`Saved screenshot to ${destFile}`)
 
+                deferred.resolve()
+
+              })
             })
           })
         })
+
       })
+  
     })
   })
 

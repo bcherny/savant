@@ -101,10 +101,12 @@ function prepare(inputDir, fontHeight) {
 
     return all(files.map(function (file) {
       // get unicode and glyph name from file name
-      var name = file.match(rgxName)[0], unicode = file.match(rgxUnicode)[0];
+      var fileBasename = basename(file), name = fileBasename.match(rgxName)[0], unicode = fileBasename.match(rgxUnicode)[0];
+
+      console.log("name=", name, ", unicode=", unicode);
 
       // check for unicode
-      if (!unicode) throw new (Error(_taggedTemplateLiteral(["Expected ", " to be in the format 'xxxx-icon-name.svg'"], ["Expected ", " to be in the format 'xxxx-icon-name.svg'"]), file))();
+      if (!unicode) throw new (Error(_taggedTemplateLiteral(["Expected ", " to be in the format 'xxxx-icon-name.svg'"], ["Expected ", " to be in the format 'xxxx-icon-name.svg'"]), fileBasename))();
 
       // normalize glyphs
       return readFilePromise(file).then(function (contents) {

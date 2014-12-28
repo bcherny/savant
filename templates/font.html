@@ -30,7 +30,7 @@
 <body>
 
 	<% _.forEach(glyphs, function(glyph) { %>
-		<div class="tif-<%= glyph.css.replace(/ /g, '-') %>"><span><%= glyph.css %></span></div>
+		<div class="<%= prefix %>-<%= glyph.css.replace(/ /g, '-') %>"><span><%= glyph.css %></span></div>
 	<% }); %>
 
 </body>

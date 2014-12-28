@@ -104,12 +104,15 @@ function prepare (inputDir, fontHeight) {
     return all(files.map(function (file) {
 
       // get unicode and glyph name from file name
-      let name = file.match(rgxName)[0]
-        , unicode = file.match(rgxUnicode)[0]
+      let fileBasename = basename(file)
+        , name = fileBasename.match(rgxName)[0]
+        , unicode = fileBasename.match(rgxUnicode)[0]
+
+      console.log('name=', name, ', unicode=', unicode)
 
       // check for unicode
       if (!unicode)
-        throw new Error `Expected ${file} to be in the format 'xxxx-icon-name.svg'`
+        throw new Error `Expected ${fileBasename} to be in the format 'xxxx-icon-name.svg'`
 
       // normalize glyphs
       return readFilePromise(file).then(function (contents) {

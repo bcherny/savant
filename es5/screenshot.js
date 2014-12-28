@@ -34,22 +34,24 @@ function shoot(srcPath, destFile, port) {
     chrome.inspector.Page.enable(function (err) {
       if (err) return deferred.reject("error enabling", err);
 
-      chrome.inspector.Page.navigate("http://127.0.0.1:" + port + "/" + basename(srcPath), function (err) {
-        if (err) return deferred.reject("error navigating", err);
+      setTimeout(function () {
+        chrome.inspector.Page.navigate("http://127.0.0.1:" + port + "/" + basename(srcPath), function (err) {
+          if (err) return deferred.reject("error navigating", err);
 
-        chrome.inspector.Page.once("domContentEventFired", function () {
-          // The second argument (100) is the JPEG quality
-          screenshot(chrome, 100, function (err, buffer, attemps) {
-            if (err) return deferred.reject("error shooting", err);
+          chrome.inspector.Page.once("domContentEventFired", function () {
+            // The second argument (100) is the JPEG quality
+            screenshot(chrome, 100, function (err, buffer, attemps) {
+              if (err) return deferred.reject("error shooting", err);
 
-            console.log("Screenshot taken after " + attemps + " attemps");
+              console.log("Screenshot taken after " + attemps + " attemps");
 
-            writeFile(destFile, buffer, function (err) {
-              if (err) return deferred.reject("error saving srceenshit to disk", err);
+              writeFile(destFile, buffer, function (err) {
+                if (err) return deferred.reject("error saving screenshot to disk", err);
 
-              console.log("Saved screenshot to " + destFile);
+                console.log("Saved screenshot to " + destFile);
 
-              deferred.resolve();
+                deferred.resolve();
+              });
             });
           });
         });
