@@ -45,7 +45,7 @@ exports.compile = compile;
 var svg2ttfBin = "../node_modules/.bin/svg2ttf", ttf2woffBin = "../node_modules/.bin/ttf2woff", ttf2eotBin = "../node_modules/.bin/ttf2eot";
 
 // regexes
-var rgxUnicode = /([a-f][a-f\d]{3,4})/i, rgxName = /-(.+).svg/, rgxAcronym = /\b([\w\d])/ig;
+var rgxUnicode = /([a-f\d]{3,4})/i, rgxName = /-(.+).svg/, rgxAcronym = /\b([\w\d])/ig;
 
 function compile(options) {
   var packageJson = {};

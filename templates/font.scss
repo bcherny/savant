@@ -13,7 +13,8 @@
 
 }
 
-[class^="<%= prefix %>-"], [class*=" <%= prefix %>-"] {
+[class^="<%= prefix %>-"]:before,
+[class*=" <%= prefix %>-"]:before {
 	font-family: "<%= fontFamily %>";
 	speak: none;
 	font-style: normal;

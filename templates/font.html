@@ -9,7 +9,7 @@
 			background: #f9f9f9;
 			height: 100px;
 			float: left;
-			font-size: 36px;
+			font: 100 36px Helvetica, Arial, sans-serif;
 			margin: 0 1px 1px 0;
 			position: relative;
 			text-align: center;
@@ -31,7 +31,10 @@
 <body>
 
 	<% _.forEach(glyphs, function(glyph) { %>
-		<div class="<%= prefix %>-<%= glyph.css.replace(/ /g, '-') %>"><span><%= glyph.css %></span></div>
+		<div
+			class="<%= prefix %>-<%= glyph.css.replace(/ /g, '-') %>"
+			title=".<%= prefix %>-<%= glyph.css.replace(/ /g, '-') %>"
+		><span><%= glyph.css %></span></div>
 	<% }); %>
 
 </body>

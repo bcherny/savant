@@ -19,7 +19,7 @@ const svg2ttfBin = '../node_modules/.bin/svg2ttf'
     , ttf2eotBin = '../node_modules/.bin/ttf2eot'
 
 // regexes
-const rgxUnicode = /([a-f][a-f\d]{3,4})/i
+const rgxUnicode = /([a-f\d]{3,4})/i
     , rgxName = /-(.+).svg/
     , rgxAcronym = /\b([\w\d])/ig
 
