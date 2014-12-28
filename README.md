@@ -37,6 +37,9 @@ savant --in [input_dir] --out [output_dir] --name [font_name] --prefix [prefix]
 
 # eg.
 savant --in src/ --out dist/ --name my-font --prefix abc
+
+# basic usage
+savant -i src -o dist
 ```
 
 `in` and `out` are required, while `name` and `prefix` are optional
