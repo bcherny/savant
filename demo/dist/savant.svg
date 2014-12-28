@@ -3,10 +3,10 @@
 <svg xmlns="http://www.w3.org/2000/svg">
   <metadata></metadata>
   <defs>
-    <font id="demo" horiz-adv-x="700">
+    <font id="savant" horiz-adv-x="700">
 
       <font-face
-         font-family="demo"
+         font-family="savant"
          font-weight="400"
          font-stretch="normal"
          units-per-em="700"

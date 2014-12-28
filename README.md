@@ -20,7 +20,7 @@ For example, let's say you have 3 icons in a folder called "src" (`0061` is the 
 
 ![](http://i.imgur.com/HQYRybl.png)
 
-Run `savant src dist`, which generates a `dist/` folder for you, containing your new web-friendly icon font:
+Run `savant -i src -o dist`, which generates a `dist/` folder for you, containing your new web-friendly icon font:
 
 ![](http://i.imgur.com/GifqI7G.png)
 
@@ -36,7 +36,7 @@ Run `savant src dist`, which generates a `dist/` folder for you, containing your
 savant inputDir outputDir
 
 # eg.
-savant src/ dist/
+savant --in src/ --out dist/
 ```
 
 ### Programmatic usage
