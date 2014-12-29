@@ -51,6 +51,8 @@ savant -i src -o dist
 
 ### Programmatic usage
 
+`savant#compile` returns a promise:
+
 ```js
 #!/usr/bin/env node
 
@@ -60,6 +62,12 @@ require('savant')
   output_dir: './dist'
 })
 .then(function () {
+  console.log('success!')
+})
+.catch(function (err) {
+  console.log('error!', err)
+})
+.finally(function () {
   console.log('done!')
 })
 ```
