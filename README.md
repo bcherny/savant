@@ -29,9 +29,9 @@ Run `savant -i src -o dist`, which generates a `dist/` folder for you, containin
 
 ![](http://i.imgur.com/GifqI7G.png)
 
-- my-font.eot, my-font.svg, my-font.ttf, and my-font.woff is your icon font, in 4 formats for [compatibility](http://caniuse.com/#feat=fontface) with every major browser
-- my-font.css and my-font.scss is the stylesheet for your font, in 2 formats depending on how you want to consume it 
-- my-font-spec.html is a spec file and my-font-spec.png is a screenshot of it, with every icon in your font neatly laid out for you (hover over an icon to see its CSS class):
+- **my-font.eot**, **my-font.svg**, **my-font.ttf**, and **my-font.woff** is your icon font, in 4 formats for [compatibility](http://caniuse.com/#feat=fontface) with every major browser
+- **my-font.css** and **my-font.scss** is the stylesheet for your font, in 2 formats depending on how you want to consume it 
+- **my-font-spec.html** is a spec file and m**y-font-spec.png** is a screenshot of it, with every icon in your font neatly laid out for you (hover over an icon to see its CSS class):
 
 ![](http://i.imgur.com/hfvknW6.png)
 
