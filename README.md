@@ -1,9 +1,11 @@
-# savant ![][bower] [![npm]](https://www.npmjs.com/package/savant)
+![savant](https://raw.githubusercontent.com/bcherny/savant/master/savant.png)
+
+> A designer-friendly way to generate icon fonts from a folder of SVG icons
+
+![][bower] [![npm]](https://www.npmjs.com/package/savant)
 
 [bower]: https://img.shields.io/bower/v/savant.svg?style=flat-square
 [npm]: https://img.shields.io/npm/v/savant.svg?style=flat-square
-
-> A designer-friendly way to generate icon fonts from a folder of SVG icons
 
 ## installation
 
